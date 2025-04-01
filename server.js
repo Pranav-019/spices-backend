@@ -9,6 +9,7 @@ const productRoutes = require("./routes/productRoute");
 const razorpayRoutes = require("./routes/razorpayRoute");
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const productOrderModel = require("./routes/ProductOrderRoute");
 
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/api/products", productRoutes);
 app.use("/api", razorpayRoutes);
 app.use("/api/auth", authRoutes);  // FIXED: Now under /api/auth
 app.use("/api/orders", orderRoutes);
+app.use("/api/productorder", productOrderModel)
 // Root Route (for testing)
 app.get("/", (req, res) => {
   res.send("Server is running...");
