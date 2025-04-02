@@ -2,26 +2,13 @@ const express = require("express");
 const ProductOrder = require("../models/productOrderModel");
 const Product = require("../models/productModel");
 const User = require("../models/authModel");
+const { verifyToken } = require("../middleware/authMiddleware"); // Import the existing middleware
 
 const router = express.Router();
 
-// Middleware to authenticate user
-const authenticateUser = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "No token provided" });
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "your_secret_key");
-    req.userId = decoded.userId;
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Invalid token" });
-  }
-};
-
 // Create an order
-router.post("/create", authenticateUser, async (req, res) => {
-  const { productId, quantity } = req.body;
+router.post("/create", verifyToken, async (req, res) => {
+  const { productId, quantity, paymentId, address } = req.body;
 
   try {
     // Find the product and user
@@ -32,21 +19,20 @@ router.post("/create", authenticateUser, async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
     // Calculate the total price based on the quantity
     const totalPrice = product.price * quantity;
 
     // Create the order
     const newOrder = new ProductOrder({
-      user: user._id,
+      user: req.userId, // Use userId from verified token
       product: product._id,
       name: product.name,
       description: product.description,
       image: product.image,
-      price: totalPrice
+      price: totalPrice,
+      quantity,
+      paymentId,
+      address
     });
 
     await newOrder.save();
@@ -64,8 +50,8 @@ router.post("/create", authenticateUser, async (req, res) => {
   }
 });
 
-// Update order status
-router.put("/:id/status", authenticateUser, async (req, res) => {
+// Update order status (protected to owner/admin)
+router.put("/:id/status", verifyToken, async (req, res) => {
   const { orderStatus } = req.body;
 
   if (!['Order Placed', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(orderStatus)) {
@@ -73,14 +59,15 @@ router.put("/:id/status", authenticateUser, async (req, res) => {
   }
 
   try {
-    const updatedOrder = await ProductOrder.findByIdAndUpdate(
-      req.params.id,
+    // Only allow updates to orders that belong to the user
+    const updatedOrder = await ProductOrder.findOneAndUpdate(
+      { _id: req.params.id, user: req.userId },
       { orderStatus },
       { new: true }
     );
 
     if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: "Order not found or not authorized" });
     }
 
     res.status(200).json({
@@ -96,8 +83,8 @@ router.put("/:id/status", authenticateUser, async (req, res) => {
   }
 });
 
-// Get orders by user
-router.get("/user", authenticateUser, async (req, res) => {
+// Get orders by user (protected)
+router.get("/user", verifyToken, async (req, res) => {
   try {
     const orders = await ProductOrder.find({ user: req.userId })
       .populate("product")
@@ -113,7 +100,7 @@ router.get("/user", authenticateUser, async (req, res) => {
   }
 });
 
-// Get all orders (admin)
+// Get all orders (admin) - Keep this unprotected as it might be for admin dashboard
 router.get("/", async (req, res) => {
   try {
     const orders = await ProductOrder.find()
