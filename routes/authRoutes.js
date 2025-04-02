@@ -21,7 +21,7 @@ const authenticateUser = async (req, res, next) => {
 
 // Sign Up
 router.post("/signup", async (req, res) => {
-  const { name, email, password, contactNo, address } = req.body;
+  const { name, email, password, contactNo, addresses } = req.body;
   
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email, and password are required" });
@@ -33,7 +33,13 @@ router.post("/signup", async (req, res) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    const user = new User({ name, email, password, contactNo, address });
+    const user = new User({ 
+      name, 
+      email, 
+      password, 
+      contactNo, 
+      addresses: addresses || [] 
+    });
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1h" });
@@ -45,7 +51,7 @@ router.post("/signup", async (req, res) => {
         name: user.name,
         email: user.email,
         contactNo: user.contactNo || null,
-        address: user.address || null
+        addresses: user.addresses
       }
     });
   } catch (error) {
@@ -77,7 +83,7 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         contactNo: user.contactNo || null,
-        address: user.address || null
+        addresses: user.addresses
       }
     });
   } catch (error) {
@@ -102,14 +108,19 @@ router.get("/user", authenticateUser, async (req, res) => {
   }
 });
 
-// Update User Information (PUT route)
+// Update User Information
 router.put("/update", authenticateUser, async (req, res) => {
   try {
-    const { name, contactNo, address } = req.body;
+    const { name, contactNo, addresses } = req.body;
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (contactNo) updateData.contactNo = contactNo;
+    if (addresses) updateData.addresses = addresses;
 
     const updatedUser = await User.findByIdAndUpdate(
       req.userId,
-      { name, contactNo, address },
+      updateData,
       { new: true, runValidators: true }
     ).select("-password");
 
@@ -121,6 +132,130 @@ router.put("/update", authenticateUser, async (req, res) => {
     });
   } catch (error) {
     console.error("Update user error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Address Management Endpoints
+router.post("/addresses", authenticateUser, async (req, res) => {
+  try {
+    const newAddress = req.body;
+    
+    // Validate required fields
+    if (!newAddress.houseFlatNo || !newAddress.landmark || !newAddress.street || 
+        !newAddress.area || !newAddress.city || !newAddress.state || !newAddress.pincode) {
+      return res.status(400).json({ message: "All address fields are required" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // If this is the first address, set as default
+    if (user.addresses.length === 0) {
+      newAddress.isDefault = true;
+    }
+
+    user.addresses.push(newAddress);
+    await user.save();
+
+    res.status(201).json({
+      message: "Address added successfully",
+      addresses: user.addresses
+    });
+  } catch (error) {
+    console.error("Add address error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/addresses/:addressId", authenticateUser, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const updatedAddress = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
+    if (addressIndex === -1) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    user.addresses[addressIndex] = {
+      ...user.addresses[addressIndex].toObject(),
+      ...updatedAddress
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Address updated successfully",
+      addresses: user.addresses
+    });
+  } catch (error) {
+    console.error("Update address error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.delete("/addresses/:addressId", authenticateUser, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
+    if (addressIndex === -1) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    // If deleting default address, set another address as default if available
+    if (user.addresses[addressIndex].isDefault && user.addresses.length > 1) {
+      const newDefaultIndex = addressIndex === 0 ? 1 : 0;
+      user.addresses[newDefaultIndex].isDefault = true;
+    }
+
+    user.addresses.splice(addressIndex, 1);
+    await user.save();
+
+    res.status(200).json({
+      message: "Address deleted successfully",
+      addresses: user.addresses
+    });
+  } catch (error) {
+    console.error("Delete address error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/addresses/:addressId/set-default", authenticateUser, async (req, res) => {
+  try {
+    const { addressId } = req.params;
+
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Reset all addresses to non-default
+    user.addresses.forEach(addr => {
+      addr.isDefault = false;
+    });
+
+    // Set the specified address as default
+    const address = user.addresses.find(addr => addr._id.toString() === addressId);
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    address.isDefault = true;
+    await user.save();
+
+    res.status(200).json({
+      message: "Default address updated successfully",
+      addresses: user.addresses
+    });
+  } catch (error) {
+    console.error("Set default address error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
