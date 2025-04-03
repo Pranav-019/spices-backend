@@ -10,6 +10,7 @@ const razorpayRoutes = require("./routes/razorpayRoute");
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const productOrderModel = require("./routes/ProductOrderRoute");
+const adminOrderRoutes = require("./routes/adminOrderRoutes");
 
 
 const app = express();
