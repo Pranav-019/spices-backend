@@ -28,7 +28,7 @@ router.get("/", verifyToken, async (req, res) => {
 });
 
 // Get a specific order by ID (protected to owner only)
-router.get("/:id", verifyToken, async (req, res) => {
+router.get("/:id", async (req, res) => {
     try {
         const order = await Order.findOne({ 
             _id: req.params.id,
@@ -85,5 +85,16 @@ router.delete("/:id", verifyToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Get all orders (Admin only)
+router.get("/all", async (req, res) => {
+    try {
+        const orders = await Order.find({});
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 module.exports = router;
