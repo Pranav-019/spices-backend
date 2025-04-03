@@ -282,14 +282,9 @@ router.get('/admin/check', authenticateUser, async (req, res) => {
 
 router.get("/all", async (req, res) => {
   try {
-    // Check if the requesting user is an admin
-    const requestingUser = await User.findById(req.userId);
-    if (!requestingUser || !requestingUser.isAdmin) {
-      return res.status(403).json({ message: "Unauthorized: Admin access required" });
-    }
-
-    // Get all users excluding their passwords
-    const users = await User.find({}).select("-password");
+    // Get all users excluding sensitive information
+    const users = await User.find({})
+      .select("-password -addresses -orders -productOrders -__v");
     
     res.status(200).json(users);
   } catch (error) {
@@ -297,5 +292,6 @@ router.get("/all", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 module.exports = router; 
