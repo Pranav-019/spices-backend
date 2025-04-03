@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const Order = require("../models/orderModel");
 const ProductOrder = require("../models/productOrderModel");
-const { authenticateAdmin } = require("../middleware/authMiddleware");
+const { verifyAdmin } = require("../middleware/authMiddleware");
 
 // Get ALL orders (admin only)
-router.get("/orders", authenticateAdmin, async (req, res) => {
+router.get("/orders", verifyAdmin, async (req, res) => {
   try {
     const orders = await Order.find().populate("user", "name email");
     res.json(orders);
@@ -15,7 +15,7 @@ router.get("/orders", authenticateAdmin, async (req, res) => {
 });
 
 // Get ALL product orders (admin only)
-router.get("/product-orders", authenticateAdmin, async (req, res) => {
+router.get("/product-orders", verifyAdmin, async (req, res) => {
   try {
     const orders = await ProductOrder.find().populate("user", "name email");
     res.json(orders);
@@ -25,7 +25,7 @@ router.get("/product-orders", authenticateAdmin, async (req, res) => {
 });
 
 // Update any order status (admin only)
-router.put("/orders/:id/status", authenticateAdmin, async (req, res) => {
+router.put("/orders/:id/status", verifyAdmin, async (req, res) => {
   try {
     const updatedOrder = await Order.findByIdAndUpdate(
       req.params.id,
@@ -39,7 +39,7 @@ router.put("/orders/:id/status", authenticateAdmin, async (req, res) => {
 });
 
 // Update any product order status (admin only)
-router.put("/product-orders/:id/status", authenticateAdmin, async (req, res) => {
+router.put("/product-orders/:id/status", verifyAdmin, async (req, res) => {
   try {
     const updatedOrder = await ProductOrder.findByIdAndUpdate(
       req.params.id,

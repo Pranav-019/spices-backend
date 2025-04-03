@@ -39,6 +39,7 @@ app.use("/api", razorpayRoutes);
 app.use("/api/auth", authRoutes);  // FIXED: Now under /api/auth
 app.use("/api/orders", orderRoutes);
 app.use("/api/productorder", productOrderModel)
+app.use("/admin", adminOrderRoutes);
 // Root Route (for testing)
 app.get("/", (req, res) => {
   res.send("Server is running...");
