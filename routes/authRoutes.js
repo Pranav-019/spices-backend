@@ -260,4 +260,9 @@ router.put("/addresses/:addressId/set-default", authenticateUser, async (req, re
   }
 });
 
+router.get('/admin/check', authenticateUser, async (req, res) => {
+  const user = await User.findById(req.userId);
+  res.json({ isAdmin: user.isAdmin });
+});
+
 module.exports = router;
