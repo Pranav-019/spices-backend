@@ -3,6 +3,9 @@ const router = express.Router();
 const Order = require("../models/orderModel");
 const { verifyToken } = require("../middleware/authMiddleware");
 
+
+
+
 // Create a new order (protected route)
 router.post("/create", verifyToken, async (req, res) => {
     try {
@@ -18,7 +21,7 @@ router.post("/create", verifyToken, async (req, res) => {
 });
 
 // Get all orders for the logged-in user (protected route)
-router.get("/", verifyToken, async (req, res) => {
+router.get("/",  async (req, res) => {
     try {
         const orders = await Order.find({ user: req.userId });
         res.json(orders);
@@ -81,16 +84,6 @@ router.delete("/:id", verifyToken, async (req, res) => {
         });
         
         res.json({ message: "Order deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get all orders (Admin only)
-router.get("/all", async (req, res) => {
-    try {
-        const orders = await Order.find({});
-        res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
