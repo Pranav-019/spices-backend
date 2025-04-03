@@ -280,18 +280,25 @@ router.get('/admin/check', authenticateUser, async (req, res) => {
   res.json({ isAdmin: user.isAdmin });
 });
 
-router.get("/all", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-    // Get all users excluding sensitive information
-    const users = await User.find({})
+    const userId = req.params.id;
+
+    // Find user by ID excluding sensitive information
+    const user = await User.findById(userId)
       .select("-password -addresses -orders -productOrders -__v");
-    
-    res.status(200).json(users);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
   } catch (error) {
-    console.error("Get all users error:", error);
+    console.error("Get user by ID error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 
 module.exports = router; 
