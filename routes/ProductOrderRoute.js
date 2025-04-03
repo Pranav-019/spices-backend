@@ -51,7 +51,7 @@ router.post("/create", verifyToken, async (req, res) => {
 });
 
 // Update order status (protected to owner/admin)
-router.put("/:id/status", verifyToken, async (req, res) => {
+router.put("/:id/status", async (req, res) => {
   const { orderStatus } = req.body;
 
   if (!['Order Placed', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(orderStatus)) {

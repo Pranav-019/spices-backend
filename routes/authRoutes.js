@@ -1,6 +1,8 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/authModel");
+const Order = require("../models/orderModel");
+const ProductOrder = require("../models/productOrderModel");
 
 const router = express.Router();
 const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
@@ -92,16 +94,29 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Get User Data with Orders
+// Get User Data with Orders and ProductOrders
 router.get("/user", authenticateUser, async (req, res) => {
   try {
     const user = await User.findById(req.userId)
       .select("-password")
-      .populate("orders");
+      .populate({
+        path: 'orders',
+        model: 'Order'
+      })
+      .populate({
+        path: 'productOrders',
+        model: 'ProductOrder'
+      });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json(user);
+    // Also fetch product orders separately since they might not be referenced in User model
+    const productOrders = await ProductOrder.find({ user: req.userId });
+
+    res.status(200).json({
+      ...user.toObject(),
+      productOrders
+    });
   } catch (error) {
     console.error("User data error:", error);
     res.status(500).json({ message: "Server error" });
@@ -265,4 +280,22 @@ router.get('/admin/check', authenticateUser, async (req, res) => {
   res.json({ isAdmin: user.isAdmin });
 });
 
-module.exports = router;
+router.get("/all", async (req, res) => {
+  try {
+    // Check if the requesting user is an admin
+    const requestingUser = await User.findById(req.userId);
+    if (!requestingUser || !requestingUser.isAdmin) {
+      return res.status(403).json({ message: "Unauthorized: Admin access required" });
+    }
+
+    // Get all users excluding their passwords
+    const users = await User.find({}).select("-password");
+    
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Get all users error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+module.exports = router; 

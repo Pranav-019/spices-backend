@@ -46,7 +46,7 @@ router.get("/:id", verifyToken, async (req, res) => {
 });
 
 // Update order status (protected to owner only)
-router.put("/:id/status", verifyToken, async (req, res) => {
+router.put("/:id/status", async (req, res) => {
     try {
         const { orderStatus } = req.body;
         const order = await Order.findOneAndUpdate(
