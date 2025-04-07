@@ -54,15 +54,14 @@ router.put("/:id/status", async (req, res) => {
         const { orderStatus } = req.body;
         const order = await Order.findOneAndUpdate(
             { 
-                _id: req.params.id,
-                user: req.userId 
+                _id: req.params.id  // Only check for order ID, removed user check
             },
             { orderStatus },
             { new: true }
         );
         
         if (!order) return res.status(404).json({ 
-            message: "Order not found or not authorized" 
+            message: "Order not found"  // Simplified message since we're not checking authorization
         });
         
         res.json({ message: "Order status updated", order });
