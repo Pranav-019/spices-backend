@@ -52,36 +52,37 @@ router.post("/create", verifyToken, async (req, res) => {
 
 // Update order status (protected to owner/admin)
 router.put("/:id/status", async (req, res) => {
-  const { orderStatus } = req.body;
-
-  if (!['Order Placed', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(orderStatus)) {
-    return res.status(400).json({ message: "Invalid order status" });
-  }
-
-  try {
-    // Only allow updates to orders that belong to the user
-    const updatedOrder = await ProductOrder.findOneAndUpdate(
-      { _id: req.params.id, user: req.userId },
-      { orderStatus },
-      { new: true }
-    );
-
-    if (!updatedOrder) {
-      return res.status(404).json({ message: "Order not found or not authorized" });
+    const { orderStatus } = req.body;
+  
+    // Validate order status
+    if (!['Order Placed', 'Processing', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'].includes(orderStatus)) {
+      return res.status(400).json({ message: "Invalid order status" });
     }
-
-    res.status(200).json({
-      message: "Order status updated successfully",
-      order: updatedOrder
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Error updating order status",
-      error: error.message
-    });
-  }
-});
+  
+    try {
+      // Update order by ID only (no user check)
+      const updatedOrder = await ProductOrder.findOneAndUpdate(
+        { _id: req.params.id }, // Removed `user: req.userId`
+        { orderStatus },
+        { new: true }
+      );
+  
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" }); // Simplified message
+      }
+  
+      res.status(200).json({
+        message: "Order status updated successfully",
+        order: updatedOrder
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Error updating order status",
+        error: error.message
+      });
+    }
+  });
 
 // Get orders by user (protected)
 router.get("/user", verifyToken, async (req, res) => {
