@@ -299,6 +299,34 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Get basic user info by ID (public route - no authentication required)
+router.get("/public/:id", async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Find user by ID excluding sensitive information
+    const user = await User.findById(userId)
+      .select("-password -addresses -orders -productOrders -__v -isAdmin -contactNo");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      // Add any other non-sensitive fields you want to expose
+    });
+  } catch (error) {
+    console.error("Get public user error:", error);
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ message: "Invalid user ID format" });
+    }
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 
 module.exports = router; 
